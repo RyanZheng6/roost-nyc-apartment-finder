@@ -1,0 +1,30 @@
+"""Double-click launcher for Roost's local-only web interface."""
+import multiprocessing
+import os
+import socket
+import threading
+import time
+import webbrowser
+
+
+def open_browser():
+    # Open only once Uvicorn has bound the local port.
+    for _ in range(80):
+        try:
+            with socket.create_connection(('127.0.0.1', 8000), timeout=0.25):
+                webbrowser.open('http://127.0.0.1:8000')
+                return
+        except OSError:
+            time.sleep(0.25)
+
+
+def main():
+    import uvicorn
+    from server import app
+    threading.Thread(target=open_browser, daemon=True).start()
+    uvicorn.run(app, host='127.0.0.1', port=8000, reload=False, access_log=False)
+
+
+if __name__ == '__main__':
+    multiprocessing.freeze_support()
+    main()
