@@ -1,0 +1,30 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local listings, favorites, saved searches, quota counters
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+backups/
+data/
+
+# Local Python environment and cache
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Editor / system / archives
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.zip
+*.log
