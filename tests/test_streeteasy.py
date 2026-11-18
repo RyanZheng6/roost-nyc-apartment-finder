@@ -1,4 +1,5 @@
 import asyncio
+import sqlite3
 import os
 import tempfile
 import unittest
@@ -59,6 +60,13 @@ class StreetEasyTests(unittest.TestCase):
         self.assertEqual(rows[0][0]['price'] if 'price' in rows[0][0] else None,None)
         msg.replace_header('From','Imposter <a@notstreeteasy.com>')
         self.assertEqual(server.parse_streeteasy_message(msg.as_bytes()),[])
+
+    def test_connection_closes_on_context_exit(self):
+        # Regression: on Windows an unclosed SQLite handle blocks temp cleanup.
+        with server.conn() as c:
+            self.assertIsNotNone(c.execute('SELECT 1').fetchone())
+        with self.assertRaises(sqlite3.ProgrammingError):
+            c.execute('SELECT 1')
 
     def test_upsert_deduplicates(self):
         i=server.streeteasy_item(FakeResponse().json()['listings'][0])

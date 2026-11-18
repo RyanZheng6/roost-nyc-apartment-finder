@@ -47,8 +47,21 @@ SOURCES = ['StreetEasy', 'StreetEasy email', 'Reddit', 'RSS', 'Authorized feed',
 SYNC_LOCK = asyncio.Lock()
 
 
+class ManagedConnection(sqlite3.Connection):
+    """Commit/rollback AND close SQLite handles on leaving a with block.
+
+    sqlite3.Connection.__exit__ alone does not close the connection. Windows
+    consequently prevents TemporaryDirectory.cleanup() from removing test DBs.
+    """
+    def __exit__(self, exc_type, exc_value, traceback):
+        try:
+            return super().__exit__(exc_type, exc_value, traceback)
+        finally:
+            self.close()
+
+
 def conn():
-    c = sqlite3.connect(DB, timeout=20)
+    c = sqlite3.connect(DB, timeout=20, factory=ManagedConnection)
     c.row_factory = sqlite3.Row
     return c
 
