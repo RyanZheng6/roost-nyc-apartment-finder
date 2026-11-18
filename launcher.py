@@ -22,7 +22,11 @@ def main():
     import uvicorn
     from server import app
     threading.Thread(target=open_browser, daemon=True).start()
-    uvicorn.run(app, host='127.0.0.1', port=8000, reload=False, access_log=False)
+    # PyInstaller --windowed sets sys.stdout/sys.stderr to None on Windows.
+    # Uvicorn's default formatter probes stderr.isatty() and crashes on startup.
+    # Disable console logging in the no-console executable.
+    uvicorn.run(app, host='127.0.0.1', port=8000, reload=False,
+                access_log=False, log_config=None)
 
 
 if __name__ == '__main__':
