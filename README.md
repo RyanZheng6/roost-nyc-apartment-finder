@@ -1,17 +1,86 @@
-## Windows one-click app (no commands after download)
-
-GitHub Actions builds a **Windows `Roost.exe`** from source whenever the main branch changes. Open the repository **Actions → Build Windows Roost.exe → latest successful run → Artifacts → Roost-Windows**, extract the EXE, and double-click it. Windows may display a SmartScreen warning for an unsigned self-built executable. The build needs to complete successfully before an EXE is available; the ZIP source by itself is not a Windows binary.
-
-All personal settings and saved searches persist at **`%USERPROFILE%\Downloads\RoostData\`**:
-
-- `RoostData\.env` — API and SMTP credentials. Never commit or share this file.
-- `RoostData\scout.db` — listings, saved searches, favorites, email history, and API counters.
-
-On first launch, Roost copies `.env` and `scout.db` from the old project folder **only if they are in the process working directory or next to the executable**, or directly in Downloads. To migrate from an unrelated old location, copy both files yourself to `Downloads\RoostData` before opening the EXE. The files are never intentionally overwritten by a new build. Keep a backup before moving data.
-
-Roost binds to `127.0.0.1:8000` (your computer only) and opens its dashboard in your default browser. **The EXE needs to remain running to send background email alerts.** To stop it, close its process from Task Manager. Do not run two copies simultaneously. If you are running the older PowerShell server, stop it before launching the EXE.
-
 # Roost — NYC Apartment Radar
+
+Private Windows apartment radar for NYC. Import authorized listing data, browse List/Map views, filter by rent and commute time, save favorites, and configure email alerts.
+
+## Download and run on Windows
+
+1. With repository access, open [Actions → Build Windows Roost.exe](../../actions/workflows/windows-exe.yml) and click the latest **successful** run.
+2. Under **Artifacts**, download **Roost-Windows**, unzip, and double-click `Roost.exe`. No terminal or Python installation is required.
+3. Roost should open in your browser at `http://127.0.0.1:8000`. Keep the EXE running to receive alerts. To stop its windowless process, use Task Manager → Details → `Roost.exe` → End task. Do not run two copies simultaneously.
+4. Windows may warn about an unsigned executable. Download only from a source you trust. GitHub artifacts expire and may need a new workflow run.
+
+## Personal settings — create a different .env for each person
+
+The Windows executable uses this folder, independent of the EXE location:
+
+```text
+C:\Users\YOUR_WINDOWS_USERNAME\Downloads\RoostData\
+    .env          ← API keys, Gmail app password, and settings (private)
+    scout.db      ← imported listings, favorites, saved filters, emails sent, and usage counters
+```
+
+**First installation:** Create `Downloads\RoostData`, download [`.env.example`](./.env.example), place a copy in that folder, and rename the copy exactly `.env`. In File Explorer enable **View → Show → File name extensions**, so it doesn't accidentally become `.env.txt`. Open it in Notepad and fill in only the credentials you need. Missing optional integrations can remain blank. The app creates `scout.db` when it first starts.
+
+**Upgrading from an older Roost:** Stop the old Roost server. Make backup copies of `.env` and `scout.db` from your old `apt-scout` folder; copy them into `Downloads\RoostData`. Don't overwrite a newer existing database without a backup. Start the new EXE and verify your saved searches remain. Replacing the EXE for future updates won't overwrite that data folder.
+
+**Security:** Do not upload `.env`, `scout.db`, or backups to GitHub or share them with friends. Keep `RoostData` private. Any credentials exposed previously should be rotated. Set strict external API quotas: Roost's app-side limits don't guarantee an account-wide zero bill.
+
+## Sharing while keeping this repository private
+
+GitHub **does not** offer a permanent anonymous secret URL for a private repository.
+
+- **Friends who need source code or GitHub builds:** Invite their GitHub usernames under **Settings → Collaborators → Add people**. They must accept the invitation and sign in. Share the repository URL after access is granted.
+- **Friends who only need the app:** Download a successful `Roost-Windows` artifact yourself, extract `Roost.exe`, and share **only that executable** through a trusted file-sharing service. They do not need repository access. They should verify the file came from you and understand that unsigned EXEs may trigger Windows warnings.
+- Each friend independently creates `Downloads\RoostData\.env` from `.env.example`, obtains their own API.SH/Google Maps/email credentials if desired, and gets a separate local `scout.db`. **Never include your personal data folder** in the shared download.
+- A file-sharing link can be restricted to invited email addresses or anyone with the link, depending on the sharing service. A publicly accessible link to the EXE does **not** expose the private GitHub repository.
+
+## Recommended .env values
+
+```dotenv
+# Optional StreetEasy listing integration via independent API.SH provider
+APISH_KEY=
+APISH_AREAS=manhattan,brooklyn,queens
+APISH_INTERVAL_MINUTES=180
+APISH_MONTHLY_BUDGET=900
+
+# Optional transit route calculations; Google Cloud billing must be enabled
+GOOGLE_MAPS_API_KEY=
+GOOGLE_ROUTES_DAILY_LIMIT=100
+GOOGLE_ROUTES_MONTHLY_LIMIT=4000
+
+# Optional Gmail SMTP alerts (Google app password, not regular password)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_FROM=
+ALERT_TO=
+SMTP_TLS=true
+
+# Optional StreetEasy alert email imports
+IMAP_HOST=imap.gmail.com
+IMAP_PORT=993
+IMAP_USER=
+IMAP_PASSWORD=
+```
+
+Get an API.SH key at https://app.api.sh/keys. For transit, enable the Google **Routes API** and restrict its key in the Google Cloud console; app quotas are not a universal account billing hard cap. For Gmail SMTP, enable 2-Step Verification and create an app password at https://myaccount.google.com/apppasswords (if your account supports it). Don't use a regular Gmail password.
+
+To receive email alerts: configure SMTP, launch Roost, save a search with alerts enabled, and leave the application running. Source polling is subject to API limits. Manual **Check for new listings** triggers a check subject to the same source limits.
+
+## Updating
+
+On future releases, download the latest successful Windows build and replace `Roost.exe` only, with the prior process stopped. Your data lives separately in `Downloads\RoostData`. Before significant updates, back up that folder, including any `scout.db-wal` or `scout.db-shm` files if present, with Roost stopped.
+
+## Source integrations and limitations
+
+The StreetEasy feed is provided by independent API.SH, not an official StreetEasy API. Free quotas, freshness and reuse rights depend on that provider. Other inputs include approved Reddit API access, permitted RSS and authorized JSON feeds, personal alert-email imports, and CSV imports. The map is powered by Leaflet/OpenStreetMap; transit calculations use Google Routes and require a verified listing location. No automatic collection from restricted websites is provided. This is a local personal-use application, not a publicly authenticated multi-user service.
+
+---
+
+## Developer details and full original documentation
+
+### Legacy project documentation
 
 A private, locally runnable NYC apartment listing aggregator with saved searches, conditional SMTP emails, a transit commute cap, free-tier StreetEasy data via API.SH and personal saved-search emails, Reddit API integration (only with approved access), configurable permitted RSS/Atom feeds, authorized JSON listing feeds, and CSV imports.
 
